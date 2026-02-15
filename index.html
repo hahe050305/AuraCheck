@@ -13,7 +13,8 @@
         body { 
             margin: 0; font-family: 'Inter', sans-serif; 
             background: var(--bg-neutral); color: #fff; overflow: hidden;
-            transition: background 0.8s cubic-bezier(0.33, 1, 0.68, 1); /* Faster but smooth color shift */
+            /* INSTANT COLOR CHANGE for punchy feel */
+            transition: background 0.15s steps(2, start); 
         }
 
         #calibration-overlay {
@@ -23,9 +24,9 @@
         .scanner-line {
             width: 180px; height: 1px; background: #fff;
             box-shadow: 0 0 15px #fff; position: absolute;
-            animation: scan 1.2s ease-in-out infinite;
+            animation: scan 0.8s ease-in-out infinite;
         }
-        @keyframes scan { 0%, 100% { top: 40%; } 50% { top: 60%; } }
+        @keyframes scan { 0%, 100% { top: 45%; } 50% { top: 55%; } }
 
         #onboarding {
             position: fixed; inset: 0; background: #000; z-index: 100;
@@ -42,21 +43,22 @@
         .bar-trail { flex-grow: 1; height: 2px; background: rgba(255,255,255,0.05); margin: 0 15px; border-radius: 10px; }
         .bar-glow { 
             height: 100%; width: 0%; 
-            transition: width 4.5s cubic-bezier(0.22, 1, 0.36, 1); /* "Installation" slow crawl */
+            /* 1GB INSTALL SPEED: Very slow, linear crawl */
+            transition: width 15s linear; 
             box-shadow: 0 0 8px currentColor; 
         }
 
         .view-circle { 
             position: relative; width: 65vw; height: 65vw; max-width: 230px;
             border-radius: 50%; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);
-            background: #000; transition: transform 0.4s ease;
+            background: #000; transition: transform 0.2s ease;
         }
         video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); opacity: 0.7; }
         
         #mood-label { 
             padding: 10px 30px; border-radius: 50px; background: #fff; color: #000;
             font-weight: 900; letter-spacing: 4px; font-size: 0.65rem;
-            margin-top: -20px; z-index: 10; transition: transform 0.2s;
+            margin-top: -20px; z-index: 10;
         }
         .cta-btn { background: #fff; color: #000; border: none; padding: 18px 50px; border-radius: 100px; font-weight: 900; cursor: pointer; }
     </style>
@@ -64,13 +66,14 @@
 <body>
     <div id="onboarding">
         <h1 style="font-weight: 800; font-size: 2rem; margin: 0;">Aura.</h1>
-        <p style="font-size: 0.8rem; opacity: 0.4; margin: 15px 0 25px;">Local Biometric Analysis</p>
+        <p style="font-size: 0.8rem; opacity: 0.4; margin: 15px 0 25px;">Professional Biometric Analysis</p>
         <button class="cta-btn" onclick="startCalibration()">LOCK IN</button>
+        <div style="margin-top:20px; font-size:0.5rem; opacity:0.3; letter-spacing:2px;">DATA REMAINS ON DEVICE</div>
     </div>
 
     <div id="calibration-overlay">
         <div class="scanner-line"></div>
-        <p id="calib-text" style="font-size: 0.5rem; letter-spacing: 3px; color: #fff; margin-top: 200px; opacity: 0.6;">INITIALIZING...</p>
+        <p id="calib-text" style="font-size: 0.5rem; letter-spacing: 3px; color: #fff; margin-top: 200px; opacity: 0.6;">SYNCING...</p>
     </div>
 
     <div id="app">
@@ -81,7 +84,6 @@
             <div class="view-circle" id="aura-glow"><video id="webcam" autoplay playsinline muted></video></div>
             <div id="mood-label">NEUTRAL</div>
         </div>
-        <div style="font-size:0.5rem; opacity:0.2; letter-spacing:2px; padding:20px;">ENC-SECURE // DEVICE-ONLY</div>
     </div>
 
 <script type="module">
@@ -130,28 +132,26 @@
             const s = {};
             result.faceBlendshapes[0].categories.forEach(c => s[c.categoryName] = c.score);
             
-            // DYNAMIC LEARNING: AI always learns "Neutral" when you aren't expressing
+            // Dynamic learning during neutral
             if (currentMood === "Neutral") {
-                for (let k in s) baseline[k] = (baseline[k] || 0) * 0.95 + (s[k] * 0.05);
+                for (let k in s) baseline[k] = (baseline[k] || 0) * 0.9 + (s[k] * 0.1);
             }
 
             if (!calibrated) {
                 frames++;
-                if (frames === 1) document.getElementById('calib-text').innerText = "SYNCING...";
-                if (frames >= 20) { // Reduced wait time (15-20 frames is enough)
+                if (frames >= 15) { // Ultra-fast loading flex
                     calibrated = true;
-                    document.getElementById('calibration-overlay').style.opacity = '0';
-                    setTimeout(() => {
-                        document.getElementById('calibration-overlay').style.display = 'none';
-                        document.getElementById('app').style.opacity = '1';
-                    }, 400);
+                    document.getElementById('calibration-overlay').style.display = 'none';
+                    document.getElementById('app').style.opacity = '1';
                 }
             } else {
                 let det = "Neutral";
                 const isSurprised = s.eyeWideLeft > 0.22 || s.jawOpen > 0.42;
                 const isHappy = s.mouthSmileLeft > 0.45;
-                const isFrustrated = s.browDownLeft > 0.22 || s.browDownRight > 0.22;
-                const isSad = ((s.browInnerUp - (baseline.browInnerUp || 0)) > 0.45 || s.mouthFrownLeft > 0.45);
+                const isFrustrated = s.browDownLeft > 0.22;
+
+                // SAD TRIGGER: Left Frown OR Right Frown OR Inner Brow Up
+                const isSad = s.mouthFrownLeft > 0.4 || s.mouthFrownRight > 0.4 || (s.browInnerUp - (baseline.browInnerUp || 0)) > 0.45;
 
                 if (isSurprised) det = "Surprised";
                 else if (isHappy) det = "Happy";
@@ -159,8 +159,8 @@
                 else if (isSad) det = "Sad";
 
                 if (det !== "Neutral") {
-                    moodPoints[det] += 0.5; totalPoints += 0.5;
-                    if (totalPoints % 10 === 0) {
+                    moodPoints[det] += 0.2; totalPoints += 0.2;
+                    if (totalPoints % 5 === 0) {
                         Object.keys(moodPoints).forEach(k => {
                             const p = Math.min(100, Math.round((moodPoints[k]/totalPoints)*100));
                             document.getElementById(`bar-${k}`).style.width = p+'%';
@@ -169,19 +169,15 @@
                     }
                 }
 
-                // FASTER SWITCHING: Reduce history size for snappy response
                 history.push(det);
-                if (history.length > 12) history.shift(); 
+                if (history.length > 8) history.shift(); // Tiny history for instant response
                 const counts = history.reduce((a, b) => (a[b] = (a[b] || 0) + 1, a), {});
                 const topMood = Object.keys(counts).reduce((a, b) => counts[a] > counts[b] ? a : b);
                 
-                // Sensitivity: Need 7 out of 12 frames to switch
-                if (counts[topMood] >= 7 && topMood !== currentMood) {
+                if (counts[topMood] >= 5 && topMood !== currentMood) {
                     currentMood = topMood;
                     document.body.style.background = EMOTIONS[topMood].color;
                     document.getElementById("mood-label").innerText = topMood.toUpperCase();
-                    document.getElementById("aura-glow").style.boxShadow = `0 0 50px ${EMOTIONS[topMood].color}`;
-                    document.getElementById("aura-glow").style.transform = topMood === "Neutral" ? "scale(1)" : "scale(1.05)";
                 }
             }
         }

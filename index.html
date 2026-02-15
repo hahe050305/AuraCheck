@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aura | Biometric Sync</title>
+    <title>Aura | Hyper-Sync</title>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/vision_bundle.js" crossorigin="anonymous"></script>
     <style>
         :root {
@@ -11,84 +11,77 @@
             --bg-frustrated: #7f1d1d; --bg-surprised: #78350f;
         }
         body { 
-            margin: 0; font-family: 'Inter', -apple-system, sans-serif; 
+            margin: 0; font-family: 'Inter', sans-serif; 
             background: var(--bg-neutral); color: #fff; overflow: hidden;
-            transition: background 1.5s ease-in-out;
+            transition: background 0.8s cubic-bezier(0.33, 1, 0.68, 1); /* Faster but smooth color shift */
         }
 
-        /* Calibration Overlay (The Flex) */
         #calibration-overlay {
             position: fixed; inset: 0; background: #000; z-index: 1000;
             display: none; flex-direction: column; align-items: center; justify-content: center;
         }
         .scanner-line {
-            width: 200px; height: 2px; background: #fff;
-            box-shadow: 0 0 20px #fff; position: absolute;
-            animation: scan 2s ease-in-out infinite;
+            width: 180px; height: 1px; background: #fff;
+            box-shadow: 0 0 15px #fff; position: absolute;
+            animation: scan 1.2s ease-in-out infinite;
         }
-        @keyframes scan { 0%, 100% { top: 30%; } 50% { top: 70%; } }
+        @keyframes scan { 0%, 100% { top: 40%; } 50% { top: 60%; } }
 
         #onboarding {
             position: fixed; inset: 0; background: #000; z-index: 100;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            padding: 40px; text-align: center; transition: opacity 0.6s ease;
+            padding: 40px; text-align: center; transition: opacity 0.4s ease;
         }
 
         #app { display: flex; flex-direction: column; align-items: center; height: 100vh; padding: 20px; box-sizing: border-box; opacity: 0; }
         
         .top-panel { width: 100%; max-width: 340px; margin-bottom: 20px; }
-        .aura-status { 
-            font-size: 0.6rem; letter-spacing: 5px; padding: 12px; 
-            background: rgba(255,255,255,0.02); border-radius: 16px; 
-            text-transform: uppercase; margin-bottom: 15px; text-align: center;
-            border: 1px solid rgba(255,255,255,0.05); color: #666;
-        }
-        .stats-card { background: rgba(255,255,255,0.03); padding: 20px; border-radius: 28px; backdrop-filter: blur(10px); }
-        .stat-row { display: flex; align-items: center; margin: 14px 0; font-size: 0.55rem; font-weight: 700; letter-spacing: 2px; color: #999; }
+        .stats-card { background: rgba(255,255,255,0.03); padding: 20px; border-radius: 28px; backdrop-filter: blur(15px); }
+        .stat-row { display: flex; align-items: center; margin: 14px 0; font-size: 0.55rem; font-weight: 700; letter-spacing: 2px; color: #666; }
         
         .bar-trail { flex-grow: 1; height: 2px; background: rgba(255,255,255,0.05); margin: 0 15px; border-radius: 10px; }
-        .bar-glow { height: 100%; width: 0%; transition: width 2.5s cubic-bezier(0.1, 0.5, 0.1, 1); box-shadow: 0 0 8px currentColor; }
+        .bar-glow { 
+            height: 100%; width: 0%; 
+            transition: width 4.5s cubic-bezier(0.22, 1, 0.36, 1); /* "Installation" slow crawl */
+            box-shadow: 0 0 8px currentColor; 
+        }
 
         .view-circle { 
-            position: relative; width: 68vw; height: 68vw; max-width: 240px;
+            position: relative; width: 65vw; height: 65vw; max-width: 230px;
             border-radius: 50%; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);
-            background: #000;
+            background: #000; transition: transform 0.4s ease;
         }
-        video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); opacity: 0.8; }
+        video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); opacity: 0.7; }
         
         #mood-label { 
-            padding: 12px 35px; border-radius: 50px; background: #fff; color: #000;
-            font-weight: 900; letter-spacing: 6px; font-size: 0.7rem;
-            margin-top: -25px; z-index: 10;
+            padding: 10px 30px; border-radius: 50px; background: #fff; color: #000;
+            font-weight: 900; letter-spacing: 4px; font-size: 0.65rem;
+            margin-top: -20px; z-index: 10; transition: transform 0.2s;
         }
         .cta-btn { background: #fff; color: #000; border: none; padding: 18px 50px; border-radius: 100px; font-weight: 900; cursor: pointer; }
-        .privacy-pill { margin-top: 30px; font-size: 0.6rem; color: #444; letter-spacing: 1px; }
-        .privacy-pill span { color: #10b981; }
     </style>
 </head>
 <body>
     <div id="onboarding">
-        <h1 style="font-weight: 800; font-size: 2.2rem; margin: 0; letter-spacing: -1px;">Aura.</h1>
-        <p style="font-size: 0.85rem; opacity: 0.4; margin: 20px 0 30px;">Professional biometric analysis.</p>
+        <h1 style="font-weight: 800; font-size: 2rem; margin: 0;">Aura.</h1>
+        <p style="font-size: 0.8rem; opacity: 0.4; margin: 15px 0 25px;">Local Biometric Analysis</p>
         <button class="cta-btn" onclick="startCalibration()">LOCK IN</button>
-        <div class="privacy-pill">LOCAL AI: <span>DATA NEVER LEAVES DEVICE</span></div>
     </div>
 
     <div id="calibration-overlay">
         <div class="scanner-line"></div>
-        <p id="calib-text" style="font-size: 0.6rem; letter-spacing: 4px; color: #fff; margin-top: 250px;">CALIBRATING NEURAL ENGINE...</p>
+        <p id="calib-text" style="font-size: 0.5rem; letter-spacing: 3px; color: #fff; margin-top: 200px; opacity: 0.6;">INITIALIZING...</p>
     </div>
 
     <div id="app">
         <div class="top-panel">
-            <div class="aura-status">CURRENT ERA // <span id="era-name" style="color:#fff">SYNCED</span></div>
             <div class="stats-card" id="vibe-bars"></div>
         </div>
         <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;">
             <div class="view-circle" id="aura-glow"><video id="webcam" autoplay playsinline muted></video></div>
-            <div id="mood-label">ANALYZING</div>
+            <div id="mood-label">NEUTRAL</div>
         </div>
-        <div style="font-size:0.5rem; opacity:0.2; letter-spacing:2px; padding-bottom:20px;">0-DATA-XFER // SECURE SESSION</div>
+        <div style="font-size:0.5rem; opacity:0.2; letter-spacing:2px; padding:20px;">ENC-SECURE // DEVICE-ONLY</div>
     </div>
 
 <script type="module">
@@ -108,10 +101,10 @@
 
     window.startCalibration = async function() {
         document.getElementById('onboarding').style.opacity = '0';
-        setTimeout(() => {
+        setTimeout(() => { 
             document.getElementById('onboarding').style.display = 'none';
             document.getElementById('calibration-overlay').style.display = 'flex';
-        }, 600);
+        }, 400);
 
         const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm");
         faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
@@ -137,42 +130,28 @@
             const s = {};
             result.faceBlendshapes[0].categories.forEach(c => s[c.categoryName] = c.score);
             
-            if (!calibrated) {
-                // Background Learning
-                for (let k in s) baseline[k] = (baseline[k] || 0) + (s[k] / 50);
-                frames++;
-                
-                // Mimic System Flex
-                if (frames === 15) document.getElementById('calib-text').innerText = "MAPPING FACIAL GEOMETRY...";
-                if (frames === 35) document.getElementById('calib-text').innerText = "LOCKING AURA CHANNELS...";
+            // DYNAMIC LEARNING: AI always learns "Neutral" when you aren't expressing
+            if (currentMood === "Neutral") {
+                for (let k in s) baseline[k] = (baseline[k] || 0) * 0.95 + (s[k] * 0.05);
+            }
 
-                if (frames >= 50) { 
+            if (!calibrated) {
+                frames++;
+                if (frames === 1) document.getElementById('calib-text').innerText = "SYNCING...";
+                if (frames >= 20) { // Reduced wait time (15-20 frames is enough)
                     calibrated = true;
                     document.getElementById('calibration-overlay').style.opacity = '0';
                     setTimeout(() => {
                         document.getElementById('calibration-overlay').style.display = 'none';
                         document.getElementById('app').style.opacity = '1';
-                    }, 600);
+                    }, 400);
                 }
             } else {
                 let det = "Neutral";
-                
-                // SURPRISED: Either eyes wide or jaw dropped
                 const isSurprised = s.eyeWideLeft > 0.22 || s.jawOpen > 0.42;
-                
-                // HAPPY: Classic smile
                 const isHappy = s.mouthSmileLeft > 0.45;
-                
-                // FRUSTRATED: Brows down/in
                 const isFrustrated = s.browDownLeft > 0.22 || s.browDownRight > 0.22;
-                
-                // SAD: Dual Path Detection
-                // Path 1: Inner Brows Up (Classic Sadness)
-                const browSad = (s.browInnerUp - baseline.browInnerUp) > 0.45;
-                // Path 2: Mouth Frown (The Pout/Grief)
-                const mouthSad = s.mouthFrownLeft > 0.45 || s.mouthFrownRight > 0.45;
-                
-                const isSad = (browSad || mouthSad) && !isSurprised;
+                const isSad = ((s.browInnerUp - (baseline.browInnerUp || 0)) > 0.45 || s.mouthFrownLeft > 0.45);
 
                 if (isSurprised) det = "Surprised";
                 else if (isHappy) det = "Happy";
@@ -180,29 +159,29 @@
                 else if (isSad) det = "Sad";
 
                 if (det !== "Neutral") {
-                    moodPoints[det]++; totalPoints++;
-                    // Slow, purposeful UI updates every 20 frames
-                    if (totalPoints % 20 === 0) {
+                    moodPoints[det] += 0.5; totalPoints += 0.5;
+                    if (totalPoints % 10 === 0) {
                         Object.keys(moodPoints).forEach(k => {
-                            const p = Math.round((moodPoints[k]/totalPoints)*100);
+                            const p = Math.min(100, Math.round((moodPoints[k]/totalPoints)*100));
                             document.getElementById(`bar-${k}`).style.width = p+'%';
                             document.getElementById(`perc-${k}`).innerText = p+'%';
                         });
-                        const top = Object.keys(moodPoints).reduce((a, b) => moodPoints[a] > moodPoints[b] ? a : b);
-                        document.getElementById('era-name').innerText = top.toUpperCase();
                     }
                 }
 
+                // FASTER SWITCHING: Reduce history size for snappy response
                 history.push(det);
-                if (history.length > 25) history.shift();
+                if (history.length > 12) history.shift(); 
                 const counts = history.reduce((a, b) => (a[b] = (a[b] || 0) + 1, a), {});
                 const topMood = Object.keys(counts).reduce((a, b) => counts[a] > counts[b] ? a : b);
                 
-                if (counts[topMood] >= 18 && topMood !== currentMood) {
+                // Sensitivity: Need 7 out of 12 frames to switch
+                if (counts[topMood] >= 7 && topMood !== currentMood) {
                     currentMood = topMood;
                     document.body.style.background = EMOTIONS[topMood].color;
                     document.getElementById("mood-label").innerText = topMood.toUpperCase();
-                    document.getElementById("aura-glow").style.boxShadow = `0 0 60px ${EMOTIONS[topMood].color}`;
+                    document.getElementById("aura-glow").style.boxShadow = `0 0 50px ${EMOTIONS[topMood].color}`;
+                    document.getElementById("aura-glow").style.transform = topMood === "Neutral" ? "scale(1)" : "scale(1.05)";
                 }
             }
         }

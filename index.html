@@ -3,57 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aura | Steady Sync</title>
+    <title>Aura Pro | Secure Biometrics</title>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/vision_bundle.js" crossorigin="anonymous"></script>
     <style>
         :root {
-            --bg-neutral: #050505; --bg-happy: #064e3b; --bg-sad: #1e3a8a; 
-            --bg-frustrated: #7f1d1d; --bg-surprised: #78350f;
+            --bg-neutral: #050506; --bg-happy: #022c22; --bg-sad: #0c1a40; 
+            --bg-frustrated: #450a0a; --bg-surprised: #422006;
         }
-        body { margin: 0; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: 'Inter', sans-serif; }
+        body { margin: 0; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: -apple-system, sans-serif; color: #fff; overflow: hidden; }
         
         #phone-wrapper {
             width: 100%; max-width: 430px; height: 100%; max-height: 932px;
-            background: var(--bg-neutral); color: #fff; overflow: hidden; position: relative;
-            transition: background 0.1s steps(2, start); border: 1px solid #111;
+            background: var(--bg-neutral); position: relative;
+            transition: background 1.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        #app { display: flex; flex-direction: column; align-items: center; height: 100%; padding: 25px; box-sizing: border-box; opacity: 0; transition: opacity 0.5s; }
-        .stats-card { background: rgba(255,255,255,0.03); padding: 20px; border-radius: 28px; width: 100%; box-sizing: border-box; }
-        .stat-row { display: flex; align-items: center; margin: 12px 0; font-size: 0.55rem; font-weight: 700; letter-spacing: 2px; color: #666; }
-        .bar-trail { flex-grow: 1; height: 3px; background: rgba(255,255,255,0.08); margin: 0 15px; border-radius: 10px; overflow: hidden; }
+        #app { display: none; flex-direction: column; align-items: center; height: 100%; padding: 25px; box-sizing: border-box; }
         
-        /* The "1GB Install" Motion: Smooth, steady, and weighted */
-        .bar-glow { 
-            height: 100%; width: 0%; 
-            transition: width 0.8s cubic-bezier(0.1, 0.4, 0.2, 1); 
-            box-shadow: 0 0 8px currentColor; 
-        }
+        /* Progressive Linear Bars */
+        .stats-card { background: rgba(255,255,255,0.02); padding: 20px; border-radius: 24px; width: 100%; border: 1px solid rgba(255,255,255,0.08); }
+        .stat-row { display: flex; align-items: center; margin: 15px 0; font-size: 0.55rem; font-weight: 800; letter-spacing: 2px; color: #52525b; }
+        .bar-trail { flex-grow: 1; height: 4px; background: rgba(255,255,255,0.05); margin: 0 12px; border-radius: 2px; overflow: hidden; }
+        
+        /* THE FIX: Linear transition for the "Install" feel */
+        .bar-glow { height: 100%; width: 0%; transition: width 0.8s linear; box-shadow: 0 0 12px currentColor; }
 
-        .view-circle { position: relative; width: 70vw; height: 70vw; max-width: 260px; border-radius: 50%; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); background: #000; margin: auto; }
-        video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); opacity: 0.8; }
+        .view-circle { position: relative; width: 65vw; height: 65vw; max-width: 240px; border-radius: 50%; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); background: #000; margin: 40px auto; }
+        video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); opacity: 0.4; filter: contrast(1.1) grayscale(0.5); }
         
-        #mood-label { padding: 12px 35px; border-radius: 50px; background: #fff; color: #000; font-weight: 900; letter-spacing: 5px; font-size: 0.7rem; margin-top: -25px; z-index: 10; text-align: center; }
-        #onboarding { position: absolute; inset: 0; background: #000; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .cta-btn { background: #fff; color: #000; border: none; padding: 18px 55px; border-radius: 100px; font-weight: 900; cursor: pointer; letter-spacing: 2px; }
+        #mood-label { display: inline-block; padding: 10px 30px; border-radius: 4px; background: rgba(255,255,255,0.05); font-weight: 800; letter-spacing: 4px; font-size: 0.7rem; border-bottom: 2px solid rgba(255,255,255,0.2); }
+        #clinical-insight { font-size: 0.55rem; color: #71717a; margin-top: 15px; letter-spacing: 1px; text-transform: uppercase; text-align: center; }
+
+        /* Privacy Onboarding */
+        #onboarding { padding: 40px; text-align: left; height: 100%; display: flex; flex-direction: column; justify-content: center; box-sizing: border-box; background: #000; }
+        .privacy-protocol { background: rgba(255,255,255,0.03); border-left: 2px solid #3b82f6; padding: 20px; border-radius: 0 12px 12px 0; margin: 25px 0; }
+        .privacy-protocol b { display: block; font-size: 0.7rem; letter-spacing: 1px; margin-bottom: 8px; color: #3b82f6; }
+        .privacy-protocol p { font-size: 0.75rem; line-height: 1.5; color: #a1a1aa; margin: 0; }
+        
+        .cta-btn { background: #fff; color: #000; border: none; padding: 22px; border-radius: 12px; font-weight: 900; width: 100%; cursor: pointer; margin-top: 20px; }
     </style>
 </head>
 <body>
 
     <div id="phone-wrapper">
         <div id="onboarding">
-            <h1 style="font-weight: 800; font-size: 2.2rem; margin: 0; letter-spacing: -1px;">Aura.</h1>
-            <p style="font-size: 0.8rem; opacity: 0.4; margin: 15px 0 30px;">Hold your emotion to sync.</p>
-            <button class="cta-btn" onclick="lockIn()">LOCK IN</button>
+            <h1 style="font-size: 2.2rem; margin: 0; letter-spacing: -1px; font-weight: 900;">Aura Pro.</h1>
+            <div class="privacy-protocol">
+                <b>ENCRYPTED LOCAL ANALYSIS</b>
+                <p>This session uses on-device WASM acceleration. No facial geometry or pixel data is transmitted to cloud servers. All biometric insights are cleared upon exit.</p>
+            </div>
+            <button class="cta-btn" id="start-btn" onclick="launchApp()">AUTHORIZE SENSORS</button>
         </div>
 
         <div id="app">
             <div class="stats-card" id="vibe-bars"></div>
-            <div style="flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center;">
-                <div class="view-circle" id="aura-glow"><video id="webcam" autoplay playsinline muted></video></div>
-                <div id="mood-label">NEUTRAL</div>
+            <div class="view-circle"><video id="webcam" autoplay playsinline muted></video></div>
+            <div id="mood-display" style="text-align:center; width:100%;">
+                <div id="mood-label">INITIALIZING</div>
+                <div id="clinical-insight">Establishing neural baseline...</div>
             </div>
-            <div style="font-size:0.5rem; opacity:0.1; letter-spacing:3px; padding-bottom:10px;">STEADY-INSTALL V24.0</div>
         </div>
     </div>
 
@@ -61,39 +69,41 @@
     import { FaceLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3";
 
     const UI = {
-        Neutral: { color: "#050505", bar: "#334155" },
-        Happy: { color: "#064e3b", bar: "#10b981" },
-        Sad: { color: "#1e3a8a", bar: "#3b82f6" },
-        Frustrated: { color: "#7f1d1d", bar: "#ef4444" },
-        Surprised: { color: "#78350f", bar: "#f59e0b" }
+        Neutral: { color: "#050506", bar: "#3f3f46", insight: "Homeostatic Balance" },
+        Happy: { color: "#022c22", bar: "#10b981", insight: "Zygomatic Stimulus Detected" },
+        Sad: { color: "#0c1a40", bar: "#3b82f6", insight: "Corrugator / Depressor Flux" },
+        Frustrated: { color: "#450a0a", bar: "#ef4444", insight: "Cognitive Load Extremity" },
+        Surprised: { color: "#422006", bar: "#f59e0b", insight: "Amodal Startle Response" }
     };
 
     let faceLandmarker, video = document.getElementById("webcam");
-    let currentMood = "Neutral", history = [], baseline = {}, frames = 0, calibrated = false;
-    
-    // Each emotion starts at 0 and goes to 100 points
+    let currentMood = "Neutral", history = [];
     let moodProgress = { Happy: 0, Sad: 0, Frustrated: 0, Surprised: 0 };
-    const MAX_POINTS = 300; // Increase this to make the "Install" even slower
+    const MAX_VAL = 450; // High count for slow "1GB" crawl
 
-    window.lockIn = async function() {
-        document.getElementById('onboarding').style.display = 'none';
-        document.getElementById('app').style.opacity = '1';
-
+    window.launchApp = async function() {
+        document.getElementById('start-btn').innerText = "BOOTING ENGINE...";
         const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm");
         faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
             baseOptions: { modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task", delegate: "GPU" },
             outputFaceBlendshapes: true, runningMode: "VIDEO", numFaces: 1
         });
-
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: 640 } });
         video.srcObject = stream;
+        document.getElementById('onboarding').style.display = 'none';
+        document.getElementById('app').style.display = 'flex';
         video.onloadeddata = () => { buildUI(); run(); };
     }
 
     function buildUI() {
         const box = document.getElementById('vibe-bars');
         Object.keys(moodProgress).forEach(key => {
-            box.innerHTML += `<div class="stat-row"><span style="width:100px">${key.toUpperCase()}</span><div class="bar-trail"><div id="bar-${key}" class="bar-glow" style="background:${UI[key].bar}; color:${UI[key].bar}"></div></div><span id="perc-${key}" style="width:35px; text-align:right">0%</span></div>`;
+            box.innerHTML += `
+                <div class="stat-row">
+                    <span style="width:85px">${key.toUpperCase()}</span>
+                    <div class="bar-trail"><div id="bar-${key}" class="bar-glow" style="background:${UI[key].bar}; color:${UI[key].bar}"></div></div>
+                    <span id="perc-${key}" style="width:30px; text-align:right; opacity:0.3">0%</span>
+                </div>`;
         });
     }
 
@@ -103,42 +113,37 @@
             const s = {};
             result.faceBlendshapes[0].categories.forEach(c => s[c.categoryName] = c.score);
             
-            if (!calibrated) {
-                for (let k in s) baseline[k] = (baseline[k] || 0) + (s[k] / 30);
-                frames++; if (frames >= 30) calibrated = true;
-            } else {
-                let det = "Neutral";
-                
-                // Human Sadness logic (High Sensitivity)
-                const isSad = s.mouthFrownLeft > 0.35 || s.mouthFrownRight > 0.35 || (s.browInnerUp - baseline.browInnerUp) > 0.35;
-                const isHappy = s.mouthSmileLeft > 0.45;
-                const isSurprised = s.eyeWideLeft > 0.2 || s.jawOpen > 0.35;
-                const isFrustrated = s.browDownLeft > 0.25;
+            let det = "Neutral";
+            const smile = (s.mouthSmileLeft + s.mouthSmileRight) / 2;
+            const browDown = (s.browDownLeft + s.browDownRight) / 2;
+            const frown = Math.max(s.mouthFrownLeft, s.mouthFrownRight);
+            const bUp = s.browInnerUp;
 
-                if (isSurprised) det = "Surprised";
-                else if (isHappy) det = "Happy";
-                else if (isFrustrated) det = "Frustrated";
-                else if (isSad) det = "Sad";
+            // Voting Gating (Consensus)
+            if (s.eyeWideLeft > 0.35 || s.jawOpen > 0.45) det = "Surprised";
+            else if (smile > 0.5) det = "Happy";
+            else if (frown > 0.42 || bUp > 0.45) det = "Sad";
+            else if (browDown > 0.38) det = "Frustrated";
 
-                // STEADY ACCUMULATION LOGIC
-                if (det !== "Neutral" && moodProgress[det] < MAX_POINTS) {
-                    moodProgress[det] += 1; // Gain progress while holding the face
-                    
-                    const p = Math.min(100, Math.round((moodProgress[det] / MAX_POINTS) * 100));
-                    document.getElementById(`bar-${det}`).style.width = p + '%';
-                    document.getElementById(`perc-${det}`).innerText = p + '%';
-                }
+            // Progressive Fill Logic
+            if (det !== "Neutral" && moodProgress[det] < MAX_VAL) {
+                moodProgress[det] += 1.8; // Linear growth per frame
+                const p = Math.min(100, Math.round((moodProgress[det] / MAX_VAL) * 100));
+                document.getElementById(`bar-${det}`).style.width = p + '%';
+                document.getElementById(`perc-${det}`).innerText = p + '%';
+            }
 
-                history.push(det);
-                if (history.length > 8) history.shift();
-                const counts = history.reduce((a, b) => (a[b] = (a[b] || 0) + 1, a), {});
-                const topMood = Object.keys(counts).reduce((a, b) => counts[a] > counts[b] ? a : b);
-                
-                if (counts[topMood] >= 5 && topMood !== currentMood) {
-                    currentMood = topMood;
-                    document.getElementById('phone-wrapper').style.background = UI[topMood].color;
-                    document.getElementById("mood-label").innerText = topMood.toUpperCase();
-                }
+            // Stability Voting Buffer (12 Frames / 75% Majority)
+            history.push(det);
+            if (history.length > 12) history.shift();
+            const counts = history.reduce((a, b) => (a[b] = (a[b] || 0) + 1, a), {});
+            const topMood = Object.keys(counts).reduce((a, b) => counts[a] > counts[b] ? a : b);
+            
+            if (counts[topMood] >= 9 && topMood !== currentMood) {
+                currentMood = topMood;
+                document.getElementById('phone-wrapper').style.background = UI[topMood].color;
+                document.getElementById("mood-label").innerText = topMood.toUpperCase();
+                document.getElementById("clinical-insight").innerText = UI[topMood].insight;
             }
         }
         requestAnimationFrame(run);

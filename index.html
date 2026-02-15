@@ -3,31 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aura | Vibe Check</title>
+    <title>Aura | Emotion Sync</title>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/vision_bundle.js" crossorigin="anonymous"></script>
     <style>
         :root {
             --bg-neutral: #050505; --bg-happy: #064e3b; --bg-sad: #1e3a8a; 
             --bg-frustrated: #7f1d1d; --bg-surprised: #78350f;
-            --accent: #d1fae5;
         }
         body { 
             margin: 0; font-family: 'Inter', -apple-system, sans-serif; 
             background: var(--bg-neutral); color: #fff; overflow: hidden;
-            transition: background 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: background 1.5s ease-in-out;
         }
-
-        /* Gen Z Onboarding */
         #onboarding {
             position: fixed; inset: 0; background: #000; z-index: 100;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             padding: 40px; text-align: center; transition: all 0.6s ease;
         }
-        .vibe-pill { font-size: 0.65rem; background: #111; color: #888; padding: 6px 16px; border-radius: 50px; margin-bottom: 24px; border: 1px solid #222; }
-        
         #app { display: flex; flex-direction: column; align-items: center; height: 100vh; padding: 20px; box-sizing: border-box; opacity: 0; }
-
-        /* Vibe Charts */
+        
         .top-panel { width: 100%; max-width: 340px; margin-bottom: 30px; }
         .aura-status { 
             font-size: 0.6rem; letter-spacing: 5px; padding: 12px; 
@@ -35,15 +29,19 @@
             text-transform: uppercase; margin-bottom: 15px; text-align: center;
             border: 1px solid rgba(255,255,255,0.05); color: #666;
         }
-        .stats-card { background: rgba(255,255,255,0.03); padding: 20px; border-radius: 28px; backdrop-filter: blur(20px); }
+        .stats-card { background: rgba(255,255,255,0.03); padding: 20px; border-radius: 28px; backdrop-filter: blur(10px); }
         .stat-row { display: flex; align-items: center; margin: 14px 0; font-size: 0.55rem; font-weight: 700; letter-spacing: 2px; color: #999; }
+        
         .bar-trail { flex-grow: 1; height: 2px; background: rgba(255,255,255,0.05); margin: 0 15px; border-radius: 10px; }
-        .bar-glow { height: 100%; width: 0%; transition: width 1.5s cubic-bezier(0.1, 0.5, 0.2, 1); box-shadow: 0 0 10px currentColor; }
+        .bar-glow { 
+            height: 100%; width: 0%; 
+            transition: width 2.2s cubic-bezier(0.1, 0.5, 0.1, 1);
+            box-shadow: 0 0 8px currentColor; 
+        }
 
-        /* The Viewfinder */
         .view-circle { 
             position: relative; width: 68vw; height: 68vw; max-width: 260px;
-            border-radius: 50%; overflow: hidden; border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 50%; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);
             background: #000;
         }
         video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); opacity: 0.8; }
@@ -51,53 +49,44 @@
         #mood-label { 
             padding: 12px 35px; border-radius: 50px; background: #fff; color: #000;
             font-weight: 900; letter-spacing: 6px; font-size: 0.7rem;
-            margin-top: -25px; z-index: 10; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            margin-top: -25px; z-index: 10;
         }
-
-        .cta-btn { 
-            background: #fff; color: #000; border: none; padding: 18px 50px; 
-            border-radius: 100px; font-weight: 900; font-size: 0.85rem; 
-            cursor: pointer; transition: transform 0.2s;
-        }
-        .cta-btn:active { transform: scale(0.95); }
+        .cta-btn { background: #fff; color: #000; border: none; padding: 18px 50px; border-radius: 100px; font-weight: 900; cursor: pointer; }
     </style>
 </head>
 <body>
     <div id="onboarding">
-        <div class="vibe-pill">100% PRIVATE // NO DATA SENT</div>
-        <h1 style="font-weight: 800; font-size: 2.2rem; margin: 0;">Check your Aura.</h1>
-        <p style="font-size: 0.85rem; opacity: 0.4; line-height: 1.6; margin: 20px 0 30px;">
-            Instant vibe check using local AI.<br>Find your current era in seconds.
-        </p>
-        <button class="cta-btn" onclick="lockIn()">LOCK IN</button>
+        <h1 style="font-weight: 800; font-size: 2.2rem; margin: 0; letter-spacing: -1px;">Aura.</h1>
+        <p style="font-size: 0.85rem; opacity: 0.4; margin: 20px 0 30px;">Hold an expression to analyze your mood.</p>
+        <button class="cta-btn" onclick="lockIn()">START SESSION</button>
     </div>
 
     <div id="app">
         <div class="top-panel">
-            <div class="aura-status">CURRENT ERA // <span id="era-name" style="color:#fff">CALIBRATING</span></div>
+            <div class="aura-status">CURRENT STATE // <span id="era-name" style="color:#fff">CALIBRATING</span></div>
             <div class="stats-card" id="vibe-bars"></div>
         </div>
 
         <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;">
             <div class="view-circle" id="aura-glow"><video id="webcam" autoplay playsinline muted></video></div>
-            <div id="mood-label">VIBING</div>
+            <div id="mood-label">ANALYZING</div>
         </div>
     </div>
 
 <script type="module">
     import { FaceLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3";
 
-    const VIBES = {
-        Neutral: { color: "#050505", bar: "#334155", label: "Chilling" },
-        Happy: { color: "#064e3b", bar: "#10b981", label: "Main Character" },
-        Sad: { color: "#1e3a8a", bar: "#3b82f6", label: "Sad Girl/Boy Era" },
-        Frustrated: { color: "#7f1d1d", bar: "#ef4444", label: "Crashing" },
-        Surprised: { color: "#78350f", bar: "#f59e0b", label: "Shook" }
+    const EMOTIONS = {
+        Neutral: { color: "#050505", bar: "#334155" },
+        Happy: { color: "#064e3b", bar: "#10b981" },
+        Sad: { color: "#1e3a8a", bar: "#3b82f6" },
+        Frustrated: { color: "#7f1d1d", bar: "#ef4444" },
+        Surprised: { color: "#78350f", bar: "#f59e0b" }
     };
 
     let faceLandmarker, video = document.getElementById("webcam");
-    let currentVibe = "Neutral", history = [], calibrated = false, baseline = {}, frames = 0;
-    let vibePoints = { Happy: 0, Sad: 0, Frustrated: 0, Surprised: 0 }, totalPoints = 0;
+    let currentMood = "Neutral", history = [], calibrated = false, baseline = {}, frames = 0;
+    let moodPoints = { Happy: 0, Sad: 0, Frustrated: 0, Surprised: 0 }, totalPoints = 0;
 
     window.lockIn = async function() {
         document.getElementById('onboarding').style.transform = 'translateY(-100%)';
@@ -108,7 +97,6 @@
             baseOptions: { modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task", delegate: "GPU" },
             outputFaceBlendshapes: true, runningMode: "VIDEO", numFaces: 1
         });
-        
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: 480, height: 480 } });
         video.srcObject = stream;
         video.onloadeddata = () => { buildUI(); run(); };
@@ -116,12 +104,8 @@
 
     function buildUI() {
         const box = document.getElementById('vibe-bars');
-        Object.keys(vibePoints).forEach(key => {
-            box.innerHTML += `<div class="stat-row">
-                <span style="width:85px">${key === 'Frustrated' ? 'CRASHING' : key.toUpperCase()}</span>
-                <div class="bar-trail"><div id="bar-${key}" class="bar-glow" style="background:${VIBES[key].bar}; color:${VIBES[key].bar}"></div></div>
-                <span id="perc-${key}" style="width:35px; text-align:right">0%</span>
-            </div>`;
+        Object.keys(moodPoints).forEach(key => {
+            box.innerHTML += `<div class="stat-row"><span style="width:105px">${key.toUpperCase()}</span><div class="bar-trail"><div id="bar-${key}" class="bar-glow" style="background:${EMOTIONS[key].bar}; color:${EMOTIONS[key].bar}"></div></div><span id="perc-${key}" style="width:35px; text-align:right">0%</span></div>`;
         });
     }
 
@@ -136,34 +120,39 @@
                 frames++; if (frames >= 30) calibrated = true;
             } else {
                 let det = "Neutral";
-                if (s.mouthSmileLeft > 0.45) det = "Happy";
-                else if (s.browDownLeft > 0.2) det = "Frustrated";
-                else if (s.eyeWideLeft > 0.25) det = "Surprised";
-                else if ((s.browInnerUp - baseline.browInnerUp) > 0.45) det = "Sad";
+                const isWide = s.eyeWideLeft > 0.22 || s.jawOpen > 0.42;
+                const isHappy = s.mouthSmileLeft > 0.45;
+                const isFrustrated = s.browDownLeft > 0.22;
+                // Strong Sadness threshold
+                const isSad = (s.browInnerUp - baseline.browInnerUp) > 0.58 || s.mouthFrownLeft > 0.52;
+
+                if (isWide && !isFrustrated) det = "Surprised";
+                else if (isHappy) det = "Happy";
+                else if (isFrustrated) det = "Frustrated";
+                else if (isSad) det = "Sad";
 
                 if (det !== "Neutral") {
-                    vibePoints[det]++; totalPoints++;
-                    if (totalPoints % 5 === 0) {
-                        Object.keys(vibePoints).forEach(k => {
-                            const p = Math.round((vibePoints[k]/totalPoints)*100);
+                    moodPoints[det]++; totalPoints++;
+                    if (totalPoints % 15 === 0) {
+                        Object.keys(moodPoints).forEach(k => {
+                            const p = Math.round((moodPoints[k]/totalPoints)*100);
                             document.getElementById(`bar-${k}`).style.width = p+'%';
                             document.getElementById(`perc-${k}`).innerText = p+'%';
                         });
-                        const top = Object.keys(vibePoints).reduce((a, b) => vibePoints[a] > vibePoints[b] ? a : b);
-                        document.getElementById('era-name').innerText = VIBES[top].label.toUpperCase();
+                        const top = Object.keys(moodPoints).reduce((a, b) => moodPoints[a] > moodPoints[b] ? a : b);
+                        document.getElementById('era-name').innerText = top.toUpperCase();
                     }
                 }
 
                 history.push(det);
-                if (history.length > 15) history.shift();
+                if (history.length > 20) history.shift();
                 const counts = history.reduce((a, b) => (a[b] = (a[b] || 0) + 1, a), {});
-                const topVibe = Object.keys(counts).reduce((a, b) => counts[a] > counts[b] ? a : b);
+                const topMood = Object.keys(counts).reduce((a, b) => counts[a] > counts[b] ? a : b);
                 
-                if (counts[topVibe] >= 8 && topVibe !== currentVibe) {
-                    currentVibe = topVibe;
-                    document.body.style.background = VIBES[topVibe].color;
-                    document.getElementById("mood-label").innerText = VIBES[topVibe].label.toUpperCase();
-                    document.getElementById("aura-glow").style.boxShadow = `0 0 80px ${VIBES[topVibe].color}`;
+                if (counts[topMood] >= 15 && topMood !== currentMood) {
+                    currentMood = topMood;
+                    document.body.style.background = EMOTIONS[topMood].color;
+                    document.getElementById("mood-label").innerText = topMood.toUpperCase();
                 }
             }
         }

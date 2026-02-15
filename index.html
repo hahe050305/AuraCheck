@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aura | Emotion Sync</title>
+    <title>Aura | Biometric Sync</title>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/vision_bundle.js" crossorigin="anonymous"></script>
     <style>
         :root {
@@ -15,14 +15,28 @@
             background: var(--bg-neutral); color: #fff; overflow: hidden;
             transition: background 1.5s ease-in-out;
         }
+
+        /* Calibration Overlay (The Flex) */
+        #calibration-overlay {
+            position: fixed; inset: 0; background: #000; z-index: 1000;
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .scanner-line {
+            width: 200px; height: 2px; background: #fff;
+            box-shadow: 0 0 20px #fff; position: absolute;
+            animation: scan 2s ease-in-out infinite;
+        }
+        @keyframes scan { 0%, 100% { top: 30%; } 50% { top: 70%; } }
+
         #onboarding {
             position: fixed; inset: 0; background: #000; z-index: 100;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            padding: 40px; text-align: center; transition: all 0.6s ease;
+            padding: 40px; text-align: center; transition: opacity 0.6s ease;
         }
+
         #app { display: flex; flex-direction: column; align-items: center; height: 100vh; padding: 20px; box-sizing: border-box; opacity: 0; }
         
-        .top-panel { width: 100%; max-width: 340px; margin-bottom: 30px; }
+        .top-panel { width: 100%; max-width: 340px; margin-bottom: 20px; }
         .aura-status { 
             font-size: 0.6rem; letter-spacing: 5px; padding: 12px; 
             background: rgba(255,255,255,0.02); border-radius: 16px; 
@@ -33,14 +47,10 @@
         .stat-row { display: flex; align-items: center; margin: 14px 0; font-size: 0.55rem; font-weight: 700; letter-spacing: 2px; color: #999; }
         
         .bar-trail { flex-grow: 1; height: 2px; background: rgba(255,255,255,0.05); margin: 0 15px; border-radius: 10px; }
-        .bar-glow { 
-            height: 100%; width: 0%; 
-            transition: width 2.2s cubic-bezier(0.1, 0.5, 0.1, 1);
-            box-shadow: 0 0 8px currentColor; 
-        }
+        .bar-glow { height: 100%; width: 0%; transition: width 2.5s cubic-bezier(0.1, 0.5, 0.1, 1); box-shadow: 0 0 8px currentColor; }
 
         .view-circle { 
-            position: relative; width: 68vw; height: 68vw; max-width: 260px;
+            position: relative; width: 68vw; height: 68vw; max-width: 240px;
             border-radius: 50%; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);
             background: #000;
         }
@@ -52,25 +62,33 @@
             margin-top: -25px; z-index: 10;
         }
         .cta-btn { background: #fff; color: #000; border: none; padding: 18px 50px; border-radius: 100px; font-weight: 900; cursor: pointer; }
+        .privacy-pill { margin-top: 30px; font-size: 0.6rem; color: #444; letter-spacing: 1px; }
+        .privacy-pill span { color: #10b981; }
     </style>
 </head>
 <body>
     <div id="onboarding">
         <h1 style="font-weight: 800; font-size: 2.2rem; margin: 0; letter-spacing: -1px;">Aura.</h1>
-        <p style="font-size: 0.85rem; opacity: 0.4; margin: 20px 0 30px;">Hold an expression to analyze your mood.</p>
-        <button class="cta-btn" onclick="lockIn()">START SESSION</button>
+        <p style="font-size: 0.85rem; opacity: 0.4; margin: 20px 0 30px;">Professional biometric analysis.</p>
+        <button class="cta-btn" onclick="startCalibration()">LOCK IN</button>
+        <div class="privacy-pill">LOCAL AI: <span>DATA NEVER LEAVES DEVICE</span></div>
+    </div>
+
+    <div id="calibration-overlay">
+        <div class="scanner-line"></div>
+        <p id="calib-text" style="font-size: 0.6rem; letter-spacing: 4px; color: #fff; margin-top: 250px;">CALIBRATING NEURAL ENGINE...</p>
     </div>
 
     <div id="app">
         <div class="top-panel">
-            <div class="aura-status">CURRENT STATE // <span id="era-name" style="color:#fff">CALIBRATING</span></div>
+            <div class="aura-status">CURRENT ERA // <span id="era-name" style="color:#fff">SYNCED</span></div>
             <div class="stats-card" id="vibe-bars"></div>
         </div>
-
         <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;">
             <div class="view-circle" id="aura-glow"><video id="webcam" autoplay playsinline muted></video></div>
             <div id="mood-label">ANALYZING</div>
         </div>
+        <div style="font-size:0.5rem; opacity:0.2; letter-spacing:2px; padding-bottom:20px;">0-DATA-XFER // SECURE SESSION</div>
     </div>
 
 <script type="module">
@@ -88,15 +106,19 @@
     let currentMood = "Neutral", history = [], calibrated = false, baseline = {}, frames = 0;
     let moodPoints = { Happy: 0, Sad: 0, Frustrated: 0, Surprised: 0 }, totalPoints = 0;
 
-    window.lockIn = async function() {
-        document.getElementById('onboarding').style.transform = 'translateY(-100%)';
-        setTimeout(() => { document.getElementById('app').style.opacity = '1'; }, 300);
+    window.startCalibration = async function() {
+        document.getElementById('onboarding').style.opacity = '0';
+        setTimeout(() => {
+            document.getElementById('onboarding').style.display = 'none';
+            document.getElementById('calibration-overlay').style.display = 'flex';
+        }, 600);
 
         const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm");
         faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
             baseOptions: { modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task", delegate: "GPU" },
             outputFaceBlendshapes: true, runningMode: "VIDEO", numFaces: 1
         });
+
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: 480, height: 480 } });
         video.srcObject = stream;
         video.onloadeddata = () => { buildUI(); run(); };
@@ -116,24 +138,51 @@
             result.faceBlendshapes[0].categories.forEach(c => s[c.categoryName] = c.score);
             
             if (!calibrated) {
-                for (let k in s) baseline[k] = (baseline[k] || 0) + (s[k] / 30);
-                frames++; if (frames >= 30) calibrated = true;
+                // Background Learning
+                for (let k in s) baseline[k] = (baseline[k] || 0) + (s[k] / 50);
+                frames++;
+                
+                // Mimic System Flex
+                if (frames === 15) document.getElementById('calib-text').innerText = "MAPPING FACIAL GEOMETRY...";
+                if (frames === 35) document.getElementById('calib-text').innerText = "LOCKING AURA CHANNELS...";
+
+                if (frames >= 50) { 
+                    calibrated = true;
+                    document.getElementById('calibration-overlay').style.opacity = '0';
+                    setTimeout(() => {
+                        document.getElementById('calibration-overlay').style.display = 'none';
+                        document.getElementById('app').style.opacity = '1';
+                    }, 600);
+                }
             } else {
                 let det = "Neutral";
-                const isWide = s.eyeWideLeft > 0.22 || s.jawOpen > 0.42;
+                
+                // SURPRISED: Either eyes wide or jaw dropped
+                const isSurprised = s.eyeWideLeft > 0.22 || s.jawOpen > 0.42;
+                
+                // HAPPY: Classic smile
                 const isHappy = s.mouthSmileLeft > 0.45;
-                const isFrustrated = s.browDownLeft > 0.22;
-                // Strong Sadness threshold
-                const isSad = (s.browInnerUp - baseline.browInnerUp) > 0.58 || s.mouthFrownLeft > 0.52;
+                
+                // FRUSTRATED: Brows down/in
+                const isFrustrated = s.browDownLeft > 0.22 || s.browDownRight > 0.22;
+                
+                // SAD: Dual Path Detection
+                // Path 1: Inner Brows Up (Classic Sadness)
+                const browSad = (s.browInnerUp - baseline.browInnerUp) > 0.45;
+                // Path 2: Mouth Frown (The Pout/Grief)
+                const mouthSad = s.mouthFrownLeft > 0.45 || s.mouthFrownRight > 0.45;
+                
+                const isSad = (browSad || mouthSad) && !isSurprised;
 
-                if (isWide && !isFrustrated) det = "Surprised";
+                if (isSurprised) det = "Surprised";
                 else if (isHappy) det = "Happy";
                 else if (isFrustrated) det = "Frustrated";
                 else if (isSad) det = "Sad";
 
                 if (det !== "Neutral") {
                     moodPoints[det]++; totalPoints++;
-                    if (totalPoints % 15 === 0) {
+                    // Slow, purposeful UI updates every 20 frames
+                    if (totalPoints % 20 === 0) {
                         Object.keys(moodPoints).forEach(k => {
                             const p = Math.round((moodPoints[k]/totalPoints)*100);
                             document.getElementById(`bar-${k}`).style.width = p+'%';
@@ -145,14 +194,15 @@
                 }
 
                 history.push(det);
-                if (history.length > 20) history.shift();
+                if (history.length > 25) history.shift();
                 const counts = history.reduce((a, b) => (a[b] = (a[b] || 0) + 1, a), {});
                 const topMood = Object.keys(counts).reduce((a, b) => counts[a] > counts[b] ? a : b);
                 
-                if (counts[topMood] >= 15 && topMood !== currentMood) {
+                if (counts[topMood] >= 18 && topMood !== currentMood) {
                     currentMood = topMood;
                     document.body.style.background = EMOTIONS[topMood].color;
                     document.getElementById("mood-label").innerText = topMood.toUpperCase();
+                    document.getElementById("aura-glow").style.boxShadow = `0 0 60px ${EMOTIONS[topMood].color}`;
                 }
             }
         }

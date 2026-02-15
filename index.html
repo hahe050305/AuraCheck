@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aura V13.1 | Deadzone Logic</title>
+    <title>Aura V13.3 | Stable-Speed</title>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/vision_bundle.js" crossorigin="anonymous"></script>
     <style>
         :root {
@@ -13,62 +13,45 @@
         body { 
             margin: 0; font-family: -apple-system, system-ui, sans-serif; 
             background: var(--bg-neutral); color: #fff; overflow: hidden;
-            transition: background 1.2s cubic-bezier(0.4, 0, 0.2, 1); 
+            transition: background 0.8s ease-in-out; 
         }
         #app { display: flex; flex-direction: column; align-items: center; justify-content: space-around; height: 100vh; padding: 20px; box-sizing: border-box; }
-        
         .view-box { 
-            position: relative; width: 75vw; height: 75vw; max-width: 320px; max-height: 320px;
+            position: relative; width: 75vw; height: 75vw; max-width: 300px; max-height: 300px;
             border-radius: 50%; overflow: hidden; border: 3px solid rgba(255,255,255,0.1);
-            box-shadow: 0 0 50px rgba(0,0,0,0.5); background: #000;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5); 
         }
         video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
-        
-        #label { 
-            padding: 10px 25px; border-radius: 30px; background: rgba(0,0,0,0.8);
-            backdrop-filter: blur(15px); font-weight: 800; letter-spacing: 3px;
-            border: 1px solid rgba(255,255,255,0.2); margin-top: -35px; z-index: 10;
-        }
-        
+        #label { padding: 10px 25px; border-radius: 30px; background: rgba(0,0,0,0.8); backdrop-filter: blur(15px); font-weight: 800; letter-spacing: 3px; border: 1px solid rgba(255,255,255,0.2); margin-top: -35px; z-index: 10; }
         .info-panel { text-align: center; }
         #advice { font-size: 1.1rem; font-weight: 500; margin-bottom: 8px; color: #f1f5f9; min-height: 1.5em; }
-        .engine-tag { font-size: 0.65rem; letter-spacing: 4px; opacity: 0.4; text-transform: uppercase; }
-        
-        #capture { 
-            width: 85%; max-width: 300px; padding: 18px; border-radius: 50px; border: none;
-            background: #fff; color: #000; font-weight: 900; letter-spacing: 1px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-        }
-        .loader { position: fixed; inset: 0; background: #0f172a; display: flex; align-items: center; justify-content: center; z-index: 100; text-align: center; }
+        .engine-tag { font-size: 0.6rem; letter-spacing: 4px; opacity: 0.4; text-transform: uppercase; }
+        #reset-btn { position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 8px 12px; border-radius: 12px; font-size: 0.7rem; }
     </style>
 </head>
 <body>
-    <div id="loading" class="loader"><div><b style="letter-spacing:5px">V13.1 DEADZONE</b><br><small style="opacity:0.5">SYNCING BIOMETRICS...</small></div></div>
+    <div id="loading" style="position:fixed; inset:0; background:#0f172a; display:flex; align-items:center; justify-content:center; z-index:100;">
+        <b style="letter-spacing:5px">V13.3 SYNC</b>
+    </div>
+
+    <button id="reset-btn" onclick="resetCalibration()">RESET BASELINE</button>
 
     <div id="app">
-        <div class="view-box" id="glow">
-            <video id="webcam" autoplay playsinline muted></video>
-        </div>
+        <div class="view-box" id="glow"><video id="webcam" autoplay playsinline muted></video></div>
         <div id="label">SYNCING</div>
-
-        <div class="info-panel">
-            <div id="advice">Look forward to calibrate...</div>
-            <div class="engine-tag">Yaw-Filtered Logic V13.1</div>
-        </div>
-
-        <button id="capture">GENERATE BIOMETRIC REPORT</button>
+        <div class="info-panel"><div id="advice">Detecting Presence...</div><div class="engine-tag">Weighted Sync Engine</div></div>
     </div>
 
 <script type="module">
     import { FaceLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3";
 
-    const UI_CONFIG = {
+    const UI = {
         Neutral: { color: "#0f172a", label: "NEUTRAL", info: "Biometric Equilibrium." },
-        Happy: { color: "#064e3b", label: "HAPPY", info: "High Positivity resonance." },
-        Sad: { color: "#1e3a8a", label: "SAD", info: "Reflective Frequency." },
-        Frustrated: { color: "#7f1d1d", label: "FRUSTRATED", info: "Internal Tension detected." },
-        Surprised: { color: "#78350f", label: "SURPRISED", info: "Rapid Data expansion." },
-        Thinking: { color: "#334155", label: "THINKING", info: "Contemplative mode active." }
+        Happy: { color: "#064e3b", label: "HAPPY", info: "High resonance detected." },
+        Sad: { color: "#1e3a8a", label: "SAD", info: "Reflective state." },
+        Frustrated: { color: "#7f1d1d", label: "FRUSTRATED", info: "System tension." },
+        Surprised: { color: "#78350f", label: "SURPRISED", info: "Data spike." },
+        Thinking: { color: "#334155", label: "THINKING", info: "Analysis in progress." }
     };
 
     let faceLandmarker, video = document.getElementById("webcam");
@@ -80,16 +63,12 @@
             baseOptions: { modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task", delegate: "GPU" },
             outputFaceBlendshapes: true, runningMode: "VIDEO", numFaces: 1
         });
-        
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-            video.srcObject = stream;
-            video.onloadeddata = () => { 
-                document.getElementById("loading").style.display = "none";
-                loop(); 
-            };
-        } catch(e) { console.error("Camera error", e); }
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+        video.srcObject = stream;
+        video.onloadeddata = () => { document.getElementById("loading").style.display = "none"; loop(); };
     }
+
+    window.resetCalibration = () => { isCalibrated = false; frames = 0; baseline = {}; };
 
     function loop() {
         const result = faceLandmarker.detectForVideo(video, performance.now());
@@ -103,49 +82,43 @@
                 frames++; if (frames >= 45) isCalibrated = true;
             } else {
                 let det = "Neutral";
-                
-                // --- SPATIAL MATH ---
-                const yaw = Math.abs(l[4].x - (l[234].x + l[454].x)/2);  // Left/Right Turn
-                const pitch = Math.abs(l[4].y - (l[10].y + l[152].y)/2); // Up/Down Tilt
+                const yaw = Math.abs(l[4].x - (l[234].x + l[454].x)/2);
+                const pitch = Math.abs(l[4].y - (l[10].y + l[152].y)/2);
 
-                // --- HIERARCHY 1: THE DEADZONE ---
-                // If head is turned too far horizontally, lock to Neutral.
-                if (yaw > 0.18) {
-                    det = "Neutral"; 
-                } 
-                // --- HIERARCHY 2: THINKING (Vertical Only) ---
-                else if (pitch > 0.18) {
-                    det = "Thinking";
-                } 
-                // --- HIERARCHY 3: EMOTIONS (Frontal Only) ---
-                else {
-                    const smile = s.mouthSmileLeft > 0.75;
-                    const wide = s.eyeWideLeft > 0.28 || s.jawOpen > 0.45;
-                    const browDown = s.browDownLeft > 0.32;
+                if (yaw > 0.20) {
+                    det = "Neutral"; // Head turned: Force neutral
+                } else if (pitch > 0.16) {
+                    det = "Thinking"; // Head tilted: Blocks Sadness
+                } else {
+                    // Optimized thresholds for responsiveness
+                    const smile = s.mouthSmileLeft > 0.55; 
+                    const browDown = s.browDownLeft > 0.22;
+                    const wide = s.eyeWideLeft > 0.25 || s.jawOpen > 0.40;
                     
-                    const innerBrowUp = (s.browInnerUp - baseline.browInnerUp) > 0.35;
-                    const mouthFrown = s.mouthFrownLeft > 0.38 || s.mouthPucker > 0.30;
-                    
+                    // Strict Sadness
+                    const pittyBrow = (s.browInnerUp - baseline.browInnerUp) > 0.48;
+                    const mouthFrown = s.mouthFrownLeft > 0.45;
+
                     if (wide && !browDown) det = "Surprised";
                     else if (smile) det = "Happy";
                     else if (browDown && !wide) det = "Frustrated";
-                    else if (innerBrowUp || (mouthFrown && !browDown)) det = "Sad";
+                    else if (pittyBrow || mouthFrown) det = "Sad";
                 }
 
-                // --- STABILITY FILTER ---
                 history.push(det);
-                if (history.length > 35) history.shift();
-                
+                if (history.length > 25) history.shift(); // Smaller window (0.8s)
+
                 const counts = history.reduce((a, b) => (a[b] = (a[b] || 0) + 1, a), {});
                 const top = Object.keys(counts).reduce((a, b) => counts[a] > counts[b] ? a : b);
 
+                // --- STABILITY PROTECTION ---
+                // We only switch if we have 60% consensus (15/25 frames)
+                // We only return to Neutral if we have 80% consensus (20/25 frames)
                 if (currentAura === "Neutral") {
-                    if (top !== "Neutral" && counts[top] >= 18) setAura(top);
+                    if (top !== "Neutral" && counts[top] >= 15) setAura(top);
                 } else {
-                    // Quick revert to Neutral if head is turned
-                    const revertReq = (det === "Neutral") ? 25 : 30; 
-                    if (top === "Neutral" && counts[top] >= revertReq) setAura("Neutral");
-                    else if (top !== "Neutral" && top !== currentAura && counts[top] >= 18) setAura(top);
+                    if (top === "Neutral" && counts[top] >= 20) setAura("Neutral");
+                    else if (top !== "Neutral" && top !== currentAura && counts[top] >= 15) setAura(top);
                 }
             }
         }
@@ -155,13 +128,12 @@
     function setAura(type) {
         if (currentAura === type) return;
         currentAura = type;
-        const data = UI_CONFIG[type];
+        const data = UI[type];
         document.body.style.background = data.color;
         document.getElementById("label").innerText = data.label;
         document.getElementById("advice").innerText = data.info;
         document.getElementById("glow").style.boxShadow = `0 0 50px ${data.color}`;
     }
-
     init();
 </script>
 </body>

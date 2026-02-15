@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aura V13.9 | Pure Emotion</title>
+    <title>Aura V14.1 | Precision Sync</title>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/vision_bundle.js" crossorigin="anonymous"></script>
     <style>
         :root {
@@ -13,10 +13,16 @@
         body { 
             margin: 0; font-family: -apple-system, system-ui, sans-serif; 
             background: var(--bg-neutral); color: #fff; overflow: hidden;
-            transition: background 0.8s ease-in-out; 
+            transition: background 0.12s linear; /* ULTRA INSTANT */
         }
-        #app { display: flex; flex-direction: column; align-items: center; justify-content: space-between; height: 100vh; padding: 40px 20px; box-sizing: border-box; }
+        #app { display: flex; flex-direction: column; align-items: center; justify-content: space-between; height: 100vh; padding: 30px 20px; box-sizing: border-box; }
         
+        .dominance-tag { 
+            font-size: 0.7rem; letter-spacing: 3px; padding: 6px 18px; 
+            background: rgba(255,255,255,0.08); border-radius: 20px; text-transform: uppercase;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
         .view-box { 
             position: relative; width: 65vw; height: 65vw; max-width: 260px;
             border-radius: 50%; overflow: hidden; border: 2px solid rgba(255,255,255,0.1);
@@ -26,25 +32,27 @@
         
         #label { 
             padding: 10px 25px; border-radius: 30px; background: rgba(0,0,0,0.9); 
-            font-weight: 800; letter-spacing: 5px; font-size: 0.9rem;
+            font-weight: 800; letter-spacing: 5px; font-size: 0.85rem;
             border: 1px solid rgba(255,255,255,0.1); margin-top: -30px; z-index: 10;
         }
         
-        .stats-container { width: 100%; max-width: 280px; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.1); }
-        .stat-row { display: flex; align-items: center; margin: 8px 0; font-size: 0.65rem; letter-spacing: 1px; font-weight: 700; }
+        .stats-container { width: 100%; max-width: 280px; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); }
+        .stat-row { display: flex; align-items: center; margin: 8px 0; font-size: 0.6rem; font-weight: 800; letter-spacing: 1px; }
         .stat-bar-bg { flex-grow: 1; height: 4px; background: rgba(255,255,255,0.1); margin: 0 12px; border-radius: 2px; }
-        .stat-bar-fill { height: 100%; width: 0%; transition: width 0.4s ease; }
+        .stat-bar-fill { height: 100%; width: 0%; transition: width 0.3s ease; }
 
-        #advice { font-size: 1rem; color: #cbd5e1; text-align: center; margin-bottom: 15px; min-height: 2.5em; padding: 0 10px; line-height: 1.4; }
+        #advice { font-size: 0.95rem; color: #cbd5e1; text-align: center; margin-bottom: 10px; min-height: 2em; font-weight: 500; }
     </style>
 </head>
 <body>
     <div id="app">
+        <div class="dominance-tag">Primary Aura: <span id="top-vibe" style="font-weight:900; color:#fff">SCANNING</span></div>
+        
         <div class="view-box" id="glow"><video id="webcam" autoplay playsinline muted></video></div>
         <div id="label">SYNCING</div>
 
         <div class="info-panel" style="width:100%; display:flex; flex-direction:column; align-items:center;">
-            <div id="advice">Hold steady to calibrate...</div>
+            <div id="advice">Detecting Presence...</div>
             <div class="stats-container" id="stats"></div>
         </div>
     </div>
@@ -53,16 +61,18 @@
     import { FaceLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3";
 
     const UI = {
-        Neutral: { color: "#020617", info: "You are centered and balanced.", barColor: "#475569" },
-        Happy: { color: "#064e3b", info: "Your energy is radiant today!", barColor: "#10b981" },
-        Sad: { color: "#1e3a8a", info: "A moment of deep reflection.", barColor: "#3b82f6" },
-        Frustrated: { color: "#7f1d1d", info: "Intensity rising. Stay grounded.", barColor: "#ef4444" },
+        Neutral: { color: "#020617", info: "Centered and Balanced.", barColor: "#475569" },
+        Happy: { color: "#064e3b", info: "Radiant energy detected!", barColor: "#10b981" },
+        Sad: { color: "#1e3a8a", info: "Reflective depth active.", barColor: "#3b82f6" },
+        Frustrated: { color: "#7f1d1d", info: "Intensity rising. Stay calm.", barColor: "#ef4444" },
         Surprised: { color: "#78350f", info: "Sense of wonder detected.", barColor: "#f59e0b" }
     };
 
     let faceLandmarker, video = document.getElementById("webcam");
     let currentAura = "Neutral", history = [], isCalibrated = false, baseline = {}, frames = 0;
-    let sessionStats = { Neutral: 0, Happy: 0, Sad: 0, Frustrated: 0, Surprised: 0, total: 0 };
+    
+    let emotionCounts = { Happy: 0, Sad: 0, Frustrated: 0, Surprised: 0 };
+    let totalEmotionFrames = 0;
     let driftTimer = 0;
 
     async function init() {
@@ -78,7 +88,7 @@
 
     function initStatsUI() {
         const container = document.getElementById('stats');
-        Object.keys(UI).forEach(key => {
+        Object.keys(emotionCounts).forEach(key => {
             container.innerHTML += `<div class="stat-row">
                 <span style="width:85px">${key.toUpperCase()}</span>
                 <div class="stat-bar-bg"><div id="bar-${key}" class="stat-bar-fill" style="background:${UI[key].barColor}"></div></div>
@@ -95,22 +105,26 @@
             const l = result.faceLandmarks[0];
 
             if (!isCalibrated) {
-                for (let k in s) baseline[k] = (baseline[k] || 0) + (s[k] / 60);
-                frames++; if (frames >= 60) isCalibrated = true;
+                for (let k in s) baseline[k] = (baseline[k] || 0) + (s[k] / 50);
+                frames++; if (frames >= 50) isCalibrated = true;
             } else {
                 let det = "Neutral";
                 const yaw = Math.abs(l[4].x - (l[234].x + l[454].x)/2);
                 const pitch = Math.abs(l[4].y - (l[10].y + l[152].y)/2);
 
-                // DEADZONE: If looking away, up, or down, force Neutral
-                if (yaw > 0.20 || pitch > 0.12) {
+                if (yaw > 0.18 || pitch > 0.14) {
                     det = "Neutral";
                 } else {
-                    const smile = s.mouthSmileLeft > 0.48; 
-                    const browDown = s.browDownLeft > 0.22;
-                    const wide = s.eyeWideLeft > 0.25 || s.jawOpen > 0.40;
-                    const pittyBrow = (s.browInnerUp - baseline.browInnerUp) > 0.48; 
-                    const mouthFrown = s.mouthFrownLeft > 0.42;
+                    const smile = s.mouthSmileLeft > 0.45; 
+                    
+                    // RELAXED FRUSTRATION (Easier to trigger)
+                    const browDown = s.browDownLeft > 0.16; 
+                    
+                    const wide = s.eyeWideLeft > 0.22 || s.jawOpen > 0.35;
+                    
+                    // HIGH THRESHOLD SADNESS (Harder to trigger accidentally)
+                    const pittyBrow = (s.browInnerUp - baseline.browInnerUp) > 0.52; 
+                    const mouthFrown = s.mouthFrownLeft > 0.50; 
 
                     if (wide && !browDown) det = "Surprised";
                     else if (smile) det = "Happy";
@@ -118,32 +132,33 @@
                     else if (pittyBrow || mouthFrown) det = "Sad";
                 }
 
-                // DYNAMIC BASELINE: Slowly adapt to the user's "Neutral" face
                 if (det === "Neutral") {
                     driftTimer++;
-                    if (driftTimer > 90) { 
-                        for (let k in s) baseline[k] = (baseline[k] * 0.92) + (s[k] * 0.08);
+                    if (driftTimer > 60) {
+                        for (let k in s) baseline[k] = (baseline[k] * 0.85) + (s[k] * 0.15);
                         driftTimer = 0;
+                    }
+                } else {
+                    emotionCounts[det]++;
+                    totalEmotionFrames++;
+                    if (totalEmotionFrames % 5 === 0) {
+                        let topKey = "Neutral"; let max = 0;
+                        Object.keys(emotionCounts).forEach(k => {
+                            const p = Math.round((emotionCounts[k]/totalEmotionFrames)*100);
+                            document.getElementById(`bar-${k}`).style.width = p+'%';
+                            document.getElementById(`perc-${k}`).innerText = p+'%';
+                            if(emotionCounts[k] > max) { max = emotionCounts[k]; topKey = k; }
+                        });
+                        document.getElementById('top-vibe').innerText = topKey.toUpperCase();
                     }
                 }
 
-                // INSTANT STATS
-                sessionStats[det]++; sessionStats.total++;
-                if (sessionStats.total % 10 === 0) {
-                    Object.keys(UI).forEach(k => {
-                        const p = Math.round((sessionStats[k]/sessionStats.total)*100);
-                        document.getElementById(`bar-${k}`).style.width = p+'%';
-                        document.getElementById(`perc-${k}`).innerText = p+'%';
-                    });
-                }
-
-                // SPEEDY TRANSITION: 20-frame window for faster response
                 history.push(det);
-                if (history.length > 20) history.shift();
+                if (history.length > 15) history.shift();
                 const counts = history.reduce((a, b) => (a[b] = (a[b] || 0) + 1, a), {});
                 const top = Object.keys(counts).reduce((a, b) => counts[a] > counts[b] ? a : b);
 
-                if (counts[top] >= 12 && top !== currentAura) setAura(top);
+                if (counts[top] >= 7 && top !== currentAura) setAura(top);
             }
         }
         requestAnimationFrame(loop);
